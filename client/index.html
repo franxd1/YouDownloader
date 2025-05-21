@@ -52,7 +52,7 @@
 
             msg.innerText = 'Processando...';
 
-            fetch('http://localhost:3000/download', {
+            fetch('https://youdownloader-xq6m.onrender.com/download', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url, format, quality })
