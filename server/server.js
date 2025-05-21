@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { exec } = require('yt-dlp-exec');
+const { spawn } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-app.post('/download', async (req, res) => {
+app.post('/download', (req, res) => {
     const { url, format, quality } = req.body;
 
     if (!url || !format) {
@@ -24,6 +24,7 @@ app.post('/download', async (req, res) => {
 
     const height = parseInt(quality) || 720;
 
+    // Monta os argumentos para o yt-dlp
     const args = [
         '-f',
         format === 'mp3'
@@ -35,29 +36,33 @@ app.post('/download', async (req, res) => {
         url
     ];
 
-    try {
-        const process = exec(args, { stdio: 'pipe' });
+    // Spawn do processo yt-dlp (deve estar instalado globalmente no sistema)
+    const ytdlp = spawn('yt-dlp', args);
 
-        process.stdout.pipe(res);
+    ytdlp.stdout.pipe(res);
 
-        process.stderr.on('data', (data) => {
-            console.error(`yt-dlp stderr: ${data}`);
-        });
+    let errorData = '';
 
-        process.on('error', (err) => {
-            console.error('Erro ao executar yt-dlp:', err);
+    ytdlp.stderr.on('data', (data) => {
+        errorData += data.toString();
+        console.error(`yt-dlp stderr: ${data}`);
+    });
+
+    ytdlp.on('error', (err) => {
+        console.error('Erro ao executar yt-dlp:', err);
+        if (!res.headersSent) {
             res.status(500).send('Erro ao iniciar download.');
-        });
+        }
+    });
 
-        process.on('close', (code) => {
-            if (code !== 0) {
-                console.error(`yt-dlp finalizou com código ${code}`);
+    ytdlp.on('close', (code) => {
+        if (code !== 0) {
+            console.error(`yt-dlp finalizou com código ${code}`);
+            if (!res.headersSent) {
+                res.status(500).send(`Erro no yt-dlp: ${errorData}`);
             }
-        });
-    } catch (error) {
-        console.error('Erro inesperado:', error);
-        res.status(500).send('Erro no servidor.');
-    }
+        }
+    });
 });
 
 app.listen(PORT, () => {
