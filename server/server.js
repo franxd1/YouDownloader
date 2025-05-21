@@ -24,7 +24,6 @@ app.post('/download', (req, res) => {
 
     const height = parseInt(quality) || 720;
 
-    // Monta os argumentos para o yt-dlp
     const args = [
         '-f',
         format === 'mp3'
@@ -36,7 +35,6 @@ app.post('/download', (req, res) => {
         url
     ];
 
-    // Spawn do processo yt-dlp (deve estar instalado globalmente no sistema)
     const ytdlp = spawn('yt-dlp', args);
 
     ytdlp.stdout.pipe(res);
@@ -45,7 +43,7 @@ app.post('/download', (req, res) => {
 
     ytdlp.stderr.on('data', (data) => {
         errorData += data.toString();
-        console.error(`yt-dlp stderr: ${data}`);
+        console.error(`yt-dlp stderr: ${data.toString()}`);
     });
 
     ytdlp.on('error', (err) => {
